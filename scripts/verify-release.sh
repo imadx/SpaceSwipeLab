@@ -25,4 +25,10 @@ codesign --verify --deep --strict --verbose=2 "$app_path"
 spctl --assess --type execute --verbose=2 "$app_path"
 lipo -archs "$app_path/Contents/MacOS/SpaceSwipeLab"
 
+icon_name="$(plutil -extract CFBundleIconFile raw "$app_path/Contents/Info.plist")"
+if [[ "$icon_name" != "AppIcon" || ! -f "$app_path/Contents/Resources/AppIcon.icns" ]]; then
+    echo "The release bundle is missing its AppIcon.icns resource." >&2
+    exit 65
+fi
+
 echo "Release verification passed: $dmg_path"

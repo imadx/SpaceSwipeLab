@@ -41,7 +41,7 @@ final class MainWindowController: NSWindowController {
             backing: .buffered,
             defer: false
         )
-        window.title = "Space Swipe Lab"
+        window.title = "Space Swipe Lab Settings"
         window.center()
         window.isReleasedWhenClosed = false
 
@@ -65,11 +65,11 @@ final class MainWindowController: NSWindowController {
             return
         }
 
-        let title = NSTextField(labelWithString: "Test animation-free Space switching")
+        let title = NSTextField(labelWithString: "Switch Spaces at your speed")
         title.font = .systemFont(ofSize: 22, weight: .semibold)
 
         let explanation = NSTextField(wrappingLabelWithString:
-            "First use the Previous and Next buttons to verify synthetic switching. Then enable the override and swipe horizontally using the finger count configured in System Settings → Trackpad → More Gestures. Set that gesture to four fingers for this test."
+            "Grant Accessibility access, choose a transition speed, and enable the swipe override. Space Swipe Lab uses the finger count configured in System Settings → Trackpad → More Gestures; choose four fingers there for the intended experience."
         )
         explanation.textColor = .secondaryLabelColor
 
@@ -94,7 +94,7 @@ final class MainWindowController: NSWindowController {
         permissionButtons.spacing = 8
 
         let permissionBox = makeSection(
-            title: "1. Permission",
+            title: "1. Accessibility",
             views: [permissionStatus, permissionButtons]
         )
 
@@ -129,7 +129,7 @@ final class MainWindowController: NSWindowController {
         switchButtons.spacing = 10
 
         let directTestBox = makeSection(
-            title: "2. Direct test",
+            title: "2. Transition",
             views: [labeledRow(label: "Transition velocity", control: velocityPopup), switchButtons]
         )
 
@@ -138,13 +138,13 @@ final class MainWindowController: NSWindowController {
         overrideCheckbox.state = engine.isOverrideEnabled ? .on : .off
 
         let safetyNote = NSTextField(wrappingLabelWithString:
-            "Turn the override off before quitting if you want to compare against the native transition. Quitting the app also removes the event tap automatically."
+            "The override is active only while Space Swipe Lab is running. Disabling it or quitting immediately restores the native gesture."
         )
         safetyNote.textColor = .secondaryLabelColor
         safetyNote.font = .systemFont(ofSize: 12)
 
         let overrideBox = makeSection(
-            title: "3. Physical swipe test",
+            title: "3. Gesture",
             views: [overrideCheckbox, safetyNote]
         )
 

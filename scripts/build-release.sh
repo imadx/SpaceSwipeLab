@@ -4,13 +4,14 @@ set -euo pipefail
 
 script_directory="$(cd "$(dirname "$0")" && pwd)"
 project_directory="$(cd "$script_directory/.." && pwd)"
-version="${RELEASE_VERSION:-0.2.0}"
+version="${RELEASE_VERSION:-0.3.0}"
 signing_identity="${SIGNING_IDENTITY:-Developer ID Application: Ishan Madhusanka (P7FS8ZJ583)}"
 dist_directory="$project_directory/dist"
 app_directory="$dist_directory/SpaceSwipeLab.app"
 dmg_staging_directory="$project_directory/build/dmg-root"
 dmg_path="$dist_directory/SpaceSwipeLab-$version.dmg"
 
+"$script_directory/build-icon.sh" >/dev/null
 swift build \
     --package-path "$project_directory" \
     --configuration release \
@@ -26,17 +27,18 @@ binary_directory="$(swift build \
 
 rm -rf "$app_directory" "$dmg_staging_directory"
 rm -f "$dmg_path" "$dist_directory/SHA256SUMS"
-mkdir -p "$app_directory/Contents/MacOS" "$dmg_staging_directory"
+mkdir -p "$app_directory/Contents/MacOS" "$app_directory/Contents/Resources" "$dmg_staging_directory"
 
 cp "$binary_directory/SpaceSwipeLab" "$app_directory/Contents/MacOS/SpaceSwipeLab"
 cp "$project_directory/Resources/Info.plist" "$app_directory/Contents/Info.plist"
+cp "$project_directory/Resources/AppIcon.icns" "$app_directory/Contents/Resources/AppIcon.icns"
 
 codesign \
     --force \
     --options runtime \
     --timestamp=http://timestamp.apple.com/ts01 \
     --sign "$signing_identity" \
-    --identifier dev.ishan.SpaceSwipeLab \
+    --identifier com.imadx.SpaceSwipeLab \
     "$app_directory"
 
 codesign --verify --deep --strict --verbose=2 "$app_directory"

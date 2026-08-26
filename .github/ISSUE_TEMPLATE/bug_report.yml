@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a Space switch, gesture, permission, or compatibility problem.
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve Space Swipe Lab. Please avoid including private window or application information.
+  - type: input
+    id: version
+    attributes:
+      label: Space Swipe Lab version
+      placeholder: 0.3.0
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: macOS 26.0
+    validations:
+      required: true
+  - type: dropdown
+    id: trackpad
+    attributes:
+      label: Trackpad
+      options:
+        - Built-in Mac trackpad
+        - Magic Trackpad
+        - Other or unknown
+    validations:
+      required: true
+  - type: dropdown
+    id: displays
+    attributes:
+      label: Displays
+      options:
+        - One display
+        - Multiple displays, separate Spaces enabled
+        - Multiple displays, separate Spaces disabled
+        - Multiple displays, setting unknown
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the selected velocity and whether the direct buttons work.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true

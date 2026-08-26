@@ -32,6 +32,11 @@ xcrun notarytool submit "$dmg_path" "${auth_arguments[@]}" --wait
 xcrun stapler staple "$dmg_path"
 xcrun stapler validate "$dmg_path"
 spctl --assess --type open --context context:primary-signature --verbose=2 "$dmg_path"
-shasum -a 256 "$dmg_path" > "$(dirname "$dmg_path")/SHA256SUMS"
+dmg_directory="$(dirname "$dmg_path")"
+dmg_filename="$(basename "$dmg_path")"
+(
+    cd "$dmg_directory"
+    shasum -a 256 "$dmg_filename" > SHA256SUMS
+)
 
 echo "$dmg_path"
