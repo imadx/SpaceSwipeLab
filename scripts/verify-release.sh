@@ -31,4 +31,16 @@ if [[ "$icon_name" != "AppIcon" || ! -f "$app_path/Contents/Resources/AppIcon.ic
     exit 65
 fi
 
+if [[ ! -L "$mount_directory/Applications" ]] || \
+    [[ "$(readlink "$mount_directory/Applications")" != "/Applications" ]]; then
+    echo "The DMG is missing its Applications drag target." >&2
+    exit 65
+fi
+
+if [[ ! -f "$mount_directory/.background/DMGBackground.png" ]] || \
+    [[ ! -f "$mount_directory/.DS_Store" ]]; then
+    echo "The DMG is missing its custom drag-and-drop layout." >&2
+    exit 65
+fi
+
 echo "Release verification passed: $dmg_path"

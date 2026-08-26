@@ -8,6 +8,7 @@
 - [x] DMG is notarized, stapled, and accepted by Gatekeeper.
 - [x] DMG checksum is published alongside the release.
 - [x] App icon includes the full macOS `.icns` size set.
+- [x] DMG presents the custom drag-and-drop background and Applications target.
 
 ## Manual compatibility matrix
 
