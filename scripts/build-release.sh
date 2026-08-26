@@ -5,6 +5,7 @@ set -euo pipefail
 script_directory="$(cd "$(dirname "$0")" && pwd)"
 project_directory="$(cd "$script_directory/.." && pwd)"
 version="${RELEASE_VERSION:-0.5.0}"
+build_number="${BUILD_NUMBER:-$(plutil -extract CFBundleVersion raw "$project_directory/Resources/Info.plist" 2>/dev/null || echo 1)}"
 signing_identity="${SIGNING_IDENTITY:-Developer ID Application: Ishan Madhusanka (P7FS8ZJ583)}"
 dist_directory="$project_directory/dist"
 app_directory="$dist_directory/SpaceSwipeLab.app"
@@ -49,6 +50,10 @@ mkdir -p \
 cp "$binary_directory/SpaceSwipeLab" "$app_directory/Contents/MacOS/SpaceSwipeLab"
 cp "$project_directory/Resources/Info.plist" "$app_directory/Contents/Info.plist"
 cp "$project_directory/Resources/AppIcon.icns" "$app_directory/Contents/Resources/AppIcon.icns"
+cp "$project_directory/LICENSE" "$app_directory/Contents/Resources/LICENSE.txt"
+cp "$project_directory/ATTRIBUTIONS.md" "$app_directory/Contents/Resources/THIRD-PARTY-NOTICES.txt"
+plutil -replace CFBundleShortVersionString -string "$version" "$app_directory/Contents/Info.plist"
+plutil -replace CFBundleVersion -string "$build_number" "$app_directory/Contents/Info.plist"
 
 codesign \
     --force \

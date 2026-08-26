@@ -4,3 +4,13 @@ build/
 dist/
 *.xcuserstate
 .swiftpm/xcode/package.xcworkspace/xcuserdata/
+.env
+.env.*
+!.env.example
+*.cer
+*.dmg
+*.keychain
+*.keychain-db
+*.mobileprovision
+*.p8
+*.p12

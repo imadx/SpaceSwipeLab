@@ -31,6 +31,12 @@ if [[ "$icon_name" != "AppIcon" || ! -f "$app_path/Contents/Resources/AppIcon.ic
     exit 65
 fi
 
+if [[ ! -f "$app_path/Contents/Resources/LICENSE.txt" ]] || \
+    [[ ! -f "$app_path/Contents/Resources/THIRD-PARTY-NOTICES.txt" ]]; then
+    echo "The release bundle is missing its license notices." >&2
+    exit 65
+fi
+
 if [[ ! -L "$mount_directory/Applications" ]] || \
     [[ "$(readlink "$mount_directory/Applications")" != "/Applications" ]]; then
     echo "The DMG is missing its Applications drag target." >&2

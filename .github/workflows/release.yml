@@ -11,6 +11,7 @@ permissions:
 jobs:
   release:
     runs-on: macos-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -33,7 +34,8 @@ jobs:
       - name: Build and sign DMG
         env:
           RELEASE_VERSION: ${{ github.ref_name }}
-          SIGNING_IDENTITY: Developer ID Application: Ishan Madhusanka (P7FS8ZJ583)
+          BUILD_NUMBER: ${{ github.run_number }}
+          SIGNING_IDENTITY: "Developer ID Application: Ishan Madhusanka (P7FS8ZJ583)"
         run: |
           version="${RELEASE_VERSION#v}"
           RELEASE_VERSION="$version" ./scripts/build-release.sh

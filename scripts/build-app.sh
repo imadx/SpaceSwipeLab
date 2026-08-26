@@ -18,6 +18,8 @@ mkdir -p "$contents_directory/MacOS" "$contents_directory/Resources"
 cp "$binary_path" "$contents_directory/MacOS/SpaceSwipeLab"
 cp "$project_directory/Resources/Info.plist" "$contents_directory/Info.plist"
 cp "$project_directory/Resources/AppIcon.icns" "$contents_directory/Resources/AppIcon.icns"
+cp "$project_directory/LICENSE" "$contents_directory/Resources/LICENSE.txt"
+cp "$project_directory/ATTRIBUTIONS.md" "$contents_directory/Resources/THIRD-PARTY-NOTICES.txt"
 
 codesign \
     --force \
