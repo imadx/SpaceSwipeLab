@@ -1,0 +1,61 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create temporary signing keychain
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.DEVELOPER_ID_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.DEVELOPER_ID_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.RELEASE_KEYCHAIN_PASSWORD }}
+        run: |
+          certificate_path="$RUNNER_TEMP/developer-id.p12"
+          keychain_path="$RUNNER_TEMP/release.keychain-db"
+          echo "$CERTIFICATE_BASE64" | base64 --decode > "$certificate_path"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security set-keychain-settings -lut 21600 "$keychain_path"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$keychain_path"
+          security import "$certificate_path" -P "$CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$keychain_path"
+          security list-keychains -d user -s "$keychain_path" login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$keychain_path"
+
+      - name: Build and sign DMG
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
+          SIGNING_IDENTITY: Developer ID Application: Ishan Madhusanka (P7FS8ZJ583)
+        run: |
+          version="${RELEASE_VERSION#v}"
+          RELEASE_VERSION="$version" ./scripts/build-release.sh
+
+      - name: Notarize and staple DMG
+        env:
+          NOTARY_KEY_BASE64: ${{ secrets.NOTARY_KEY_BASE64 }}
+          NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}
+          NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+        run: |
+          key_path="$RUNNER_TEMP/AuthKey.p8"
+          echo "$NOTARY_KEY_BASE64" | base64 --decode > "$key_path"
+          version="${GITHUB_REF_NAME#v}"
+          NOTARY_API_KEY_PATH="$key_path" ./scripts/notarize-release.sh "dist/SpaceSwipeLab-$version.dmg"
+
+      - name: Refresh checksum after notarization
+        run: shasum -a 256 dist/*.dmg > dist/SHA256SUMS
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.dmg
+            dist/SHA256SUMS
+          generate_release_notes: true
