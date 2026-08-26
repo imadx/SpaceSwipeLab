@@ -4,7 +4,7 @@ A local macOS prototype for replacing the native horizontal Space-switching gest
 
 Space Swipe Lab is free and open source under the MIT license. It runs as a background menu-bar utility, makes no network requests, and does not collect analytics.
 
-The app icon source is stored at `Resources/AppIconSource.png`. Run `scripts/build-icon.sh` to regenerate the complete `AppIcon.icns` file used by local and release builds. The release DMG uses a custom, interactive Finder layout: drag the app from its illuminated landing zone into the real Applications alias on the right.
+The app icon source is stored at `Resources/AppIconSource.png`. Run `scripts/build-icon.sh` to regenerate the complete `AppIcon.icns` file used by local and release builds. The release DMG uses a minimal, interactive Finder layout with a direct drag-to-install instruction. Run `xcrun swift scripts/build-dmg-background.swift` to regenerate its background from `Resources/DMGBackgroundSource.png`.
 
 ## Requirements
 
@@ -60,7 +60,7 @@ The universal signed DMG and checksum are written to `dist/`. To notarize it, pr
 
 ```bash
 NOTARY_KEYCHAIN_PROFILE=your-profile \
-  ./scripts/notarize-release.sh "$PWD/dist/SpaceSwipeLab-0.4.0.dmg"
+  ./scripts/notarize-release.sh "$PWD/dist/SpaceSwipeLab-0.4.1.dmg"
 ```
 
 The release workflow expects these GitHub Actions secrets:
