@@ -13,7 +13,7 @@ The app icon source is stored at `Resources/AppIconSource.png`. Run `scripts/bui
 - At least two Mission Control Spaces
 - Accessibility permission for the locally built app
 
-This prototype uses undocumented `CGEvent` types and fields. It is intended for local testing and direct distribution, not the Mac App Store. System Integrity Protection does not need to be disabled.
+This prototype uses undocumented `CGEvent` types and SkyLight Space information. It is intended for local testing and direct distribution, not the Mac App Store. System Integrity Protection does not need to be disabled.
 
 ## Build and run
 
@@ -24,21 +24,21 @@ cd /Users/ishan/projects/ishan/SpaceSwipeLab
 
 On first launch:
 
-1. Click **Request Accessibility Access**.
+1. Click **Allow Access**.
 2. Enable **Space Swipe Lab** in System Settings → Privacy & Security → Accessibility.
-3. Return to the app. The permission indicator should turn green within a second.
+3. Return to the app. The status card should turn green within a second.
 4. Use **Previous Space** and **Next Space** to verify that synthetic switching works.
 5. In System Settings → Trackpad → More Gestures, configure **Swipe between full-screen applications** to use four fingers.
-6. Enable **Override the native horizontal Space swipe**.
+6. Turn on **Fast switching**.
 7. Swipe left or right with four fingers.
 
-Closing the settings window leaves the utility running. Use the menu-bar icon to enable or disable the override, reopen settings, or quit. Settings also include launch-at-login and menu-bar visibility controls.
+Choose **Normal**, **Fast**, or **Instant** in the main window. Closing the window leaves the utility running. Use the menu-bar icon to enable or disable the override, reopen settings, or quit. Menu-bar visibility, launch at login, and Accessibility settings are in the ellipsis menu.
 
-Start with velocity 80 if you want to observe a very short transition. Use 2000 for an effectively instant switch.
+At the first or last Space, an outward swipe is returned to macOS instead of being replaced. This keeps the familiar native edge feedback when there is no desktop in that direction.
 
 ## Restore normal behavior
 
-Turn off the override checkbox or quit the app. The event tap exists only while the process is running; the app does not permanently change trackpad settings.
+Turn off the Fast switching control or quit the app. The event tap exists only while the process is running; the app does not permanently change trackpad settings.
 
 ## Tests
 
@@ -46,7 +46,7 @@ Turn off the override checkbox or quit the app. The event tap exists only while 
 swift test
 ```
 
-The automated tests cover the gesture phase/direction state machine. Actual Space switching must be verified interactively because it is controlled by Dock and WindowServer.
+The automated tests cover the gesture phase/direction state machine, Space ordering, boundary decisions, and a live SkyLight topology read. Actual gesture switching must still be verified interactively because it is controlled by Dock and WindowServer.
 
 ## Build a signed release locally
 
@@ -60,7 +60,7 @@ The universal signed DMG and checksum are written to `dist/`. To notarize it, pr
 
 ```bash
 NOTARY_KEYCHAIN_PROFILE=your-profile \
-  ./scripts/notarize-release.sh "$PWD/dist/SpaceSwipeLab-0.4.1.dmg"
+  ./scripts/notarize-release.sh "$PWD/dist/SpaceSwipeLab-0.5.0.dmg"
 ```
 
 The release workflow expects these GitHub Actions secrets:

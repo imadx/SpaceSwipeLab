@@ -77,10 +77,26 @@ enum SpaceSwipeEngineError: LocalizedError {
 final class SpaceSwipeEngine {
     var velocity: Double = 2_000
     var onSwitch: ((SpaceDirection) -> Void)?
+    var onBoundary: ((SpaceDirection) -> Void)?
 
+    private enum GestureRoutingState {
+        case idle
+        case pendingDirection
+        case replacement
+        case nativeBoundary
+    }
+
+    private static let replayMarker: Int64 = 0x5353_504C
+    private let spaceTopology: SpaceTopology
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var stateMachine = DockSwipeStateMachine()
+    private var routingState = GestureRoutingState.idle
+    private var bufferedNativeEvents: [CGEvent] = []
+
+    init(spaceTopology: SpaceTopology = SpaceTopology()) {
+        self.spaceTopology = spaceTopology
+    }
 
     var isOverrideEnabled: Bool {
         eventTap != nil
@@ -96,11 +112,23 @@ final class SpaceSwipeEngine {
         return AXIsProcessTrustedWithOptions([promptKey: true] as CFDictionary)
     }
 
-    func postSpaceSwipe(_ direction: SpaceDirection) throws {
+    @discardableResult
+    func postSpaceSwipe(_ direction: SpaceDirection) throws -> Bool {
         guard Self.isAccessibilityTrusted else {
             throw SpaceSwipeEngineError.accessibilityPermissionRequired
         }
 
+        if let snapshot = spaceTopology.currentSnapshot(), !snapshot.canMove(direction) {
+            onBoundary?(direction)
+            return false
+        }
+
+        postReplacementSpaceSwipe(direction)
+        return true
+    }
+
+    private func postReplacementSpaceSwipe(_ direction: SpaceDirection) {
+        
         let signedVelocity = direction.sign * velocity
         let progress = direction.sign * Double(Float.leastNonzeroMagnitude)
 
@@ -159,6 +187,7 @@ final class SpaceSwipeEngine {
 
     func stopOverride() {
         stateMachine.reset()
+        resetGestureRouting()
 
         if let source = runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
@@ -184,6 +213,10 @@ final class SpaceSwipeEngine {
             return Unmanaged.passUnretained(event)
         }
 
+        if event.getIntegerValueField(.eventSourceUserData) == Self.replayMarker {
+            return Unmanaged.passUnretained(event)
+        }
+
         let internalType = event.getIntegerValueField(Self.field(55))
 
         // Real HID gestures use source PID 0. Let our synthetic events pass through so the
@@ -206,25 +239,107 @@ final class SpaceSwipeEngine {
             let progress = event.getDoubleValueField(Self.field(124))
             let velocityX = event.getDoubleValueField(Self.field(129))
 
-            if let direction = stateMachine.consume(
+            if phase == 1 {
+                _ = stateMachine.consume(
+                    phase: phase,
+                    progress: progress,
+                    velocityX: velocityX
+                )
+                let isAlreadyBuffering: Bool
+                if case .pendingDirection = routingState {
+                    isAlreadyBuffering = true
+                } else {
+                    isAlreadyBuffering = false
+                }
+                // A companion event can arrive just before Dock's control event.
+                if !isAlreadyBuffering {
+                    bufferedNativeEvents.removeAll(keepingCapacity: true)
+                }
+                routingState = .pendingDirection
+                bufferForNativeReplay(event)
+                return nil
+            }
+
+            let direction = stateMachine.consume(
                 phase: phase,
                 progress: progress,
                 velocityX: velocityX
-            ) {
-                try? postSpaceSwipe(direction)
+            )
+
+            if routingState == .pendingDirection {
+                if let direction {
+                    chooseRouting(for: direction)
+                } else if phase == 2 {
+                    bufferForNativeReplay(event)
+                }
             }
 
-            // Suppress the native Dock swipe so its animated transition is not shown.
-            return nil
+            let shouldUseNativeGesture = routingState == .nativeBoundary
+            if phase == 4 || phase == 8 {
+                resetGestureRouting()
+            }
+
+            // Valid switches use our replacement gesture. At either boundary, the original
+            // gesture sequence is replayed and all remaining events stay native.
+            return shouldUseNativeGesture ? Unmanaged.passUnretained(event) : nil
         }
 
-        // The Dock emits a companion gesture event alongside its control event. Suppress it only
-        // while a horizontal Space swipe is active.
-        if internalType == 29, stateMachine.isTracking {
-            return nil
+        // Dock sends companion gesture events alongside its control event. Hold them only until
+        // the swipe direction is known so they can be restored for first/last-Space feedback.
+        if internalType == 29 {
+            switch routingState {
+            case .pendingDirection:
+                bufferForNativeReplay(event)
+                return nil
+            case .replacement:
+                return nil
+            case .nativeBoundary:
+                return Unmanaged.passUnretained(event)
+            case .idle:
+                routingState = .pendingDirection
+                bufferedNativeEvents.removeAll(keepingCapacity: true)
+                bufferForNativeReplay(event)
+                return nil
+            }
         }
 
         return Unmanaged.passUnretained(event)
+    }
+
+    private func chooseRouting(for direction: SpaceDirection) {
+        if let snapshot = spaceTopology.currentSnapshot(), !snapshot.canMove(direction) {
+            routingState = .nativeBoundary
+            replayBufferedNativeEvents()
+            onBoundary?(direction)
+            return
+        }
+
+        routingState = .replacement
+        bufferedNativeEvents.removeAll(keepingCapacity: true)
+        postReplacementSpaceSwipe(direction)
+    }
+
+    private func bufferForNativeReplay(_ event: CGEvent) {
+        guard bufferedNativeEvents.count < 12, let copiedEvent = event.copy() else {
+            return
+        }
+        bufferedNativeEvents.append(copiedEvent)
+    }
+
+    private func replayBufferedNativeEvents() {
+        for event in bufferedNativeEvents {
+            guard let replay = event.copy() else {
+                continue
+            }
+            replay.setIntegerValueField(.eventSourceUserData, value: Self.replayMarker)
+            replay.post(tap: .cgSessionEventTap)
+        }
+        bufferedNativeEvents.removeAll(keepingCapacity: true)
+    }
+
+    private func resetGestureRouting() {
+        routingState = .idle
+        bufferedNativeEvents.removeAll(keepingCapacity: true)
     }
 
     private static let eventTapCallback: CGEventTapCallBack = {

@@ -4,7 +4,7 @@ set -euo pipefail
 
 script_directory="$(cd "$(dirname "$0")" && pwd)"
 project_directory="$(cd "$script_directory/.." && pwd)"
-version="${RELEASE_VERSION:-0.4.1}"
+version="${RELEASE_VERSION:-0.5.0}"
 signing_identity="${SIGNING_IDENTITY:-Developer ID Application: Ishan Madhusanka (P7FS8ZJ583)}"
 dist_directory="$project_directory/dist"
 app_directory="$dist_directory/SpaceSwipeLab.app"
