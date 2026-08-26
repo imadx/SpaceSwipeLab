@@ -1,12 +1,12 @@
 # Space Swipe Lab
 
-Space Swipe Lab is a free, open-source macOS utility for switching Mission Control Spaces with much shorter motion. Choose **Normal**, **Fast**, or **Instant**, then use the same horizontal trackpad gesture you already know.
+Space Swipe Lab is a free, open-source macOS utility for switching Mission Control Spaces with much shorter motion. Choose **Normal**, **Fast**, **Faster**, or **Instant**, then use the same horizontal trackpad gesture you already know.
 
 It runs locally, makes no network requests, and does not collect analytics.
 
 ## Features
 
-- Normal, Fast, and near-instant Space transitions
+- A four-stop speed slider that snaps to Normal, Fast, Faster, and Instant
 - Four-finger horizontal gesture support through the macOS trackpad setting
 - Native macOS edge feedback when swiping beyond the first or last Space
 - Quick Previous and Next buttons for testing
@@ -64,7 +64,7 @@ The universal signed DMG and checksum are written to `dist/`. To submit the DMG 
 
 ```bash
 NOTARY_KEYCHAIN_PROFILE=your-profile \
-  ./scripts/notarize-release.sh "$PWD/dist/SpaceSwipeLab-0.5.0.dmg"
+  ./scripts/notarize-release.sh "$PWD/dist/SpaceSwipeLab-0.5.1.dmg"
 ```
 
 The tag-based GitHub release workflow expects these repository secrets:

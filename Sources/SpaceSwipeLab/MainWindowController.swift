@@ -9,22 +9,21 @@ final class MainWindowController: NSWindowController {
     private let permissionDetail = NSTextField(wrappingLabelWithString: "")
     private let permissionButton = NSButton()
     private let overrideSwitch = NSSwitch()
-    private let speedControl = NSSegmentedControl(
-        labels: ["Normal", "Fast", "Instant"],
-        trackingMode: .selectOne,
+    private let speedSlider = NSSlider(
+        value: 0,
+        minValue: 0,
+        maxValue: Double(TransitionSpeed.allCases.count - 1),
         target: nil,
         action: nil
     )
+    private let speedName = NSTextField(labelWithString: "")
     private let speedCaption = NSTextField(labelWithString: "")
+    private lazy var speedLabels: [NSTextField] = TransitionSpeed.allCases.map {
+        NSTextField(labelWithString: $0.title)
+    }
     private let eventStatus = NSTextField(labelWithString: "Ready")
     private let optionsButton = NSButton()
     private var permissionTimer: Timer?
-
-    private let speedOptions: [(caption: String, value: Double)] = [
-        ("macOS-like motion", 40),
-        ("short, responsive motion", 80),
-        ("near-instant switching", 2_000)
-    ]
 
     init(engine: SpaceSwipeEngine) {
         self.engine = engine
@@ -190,16 +189,34 @@ final class MainWindowController: NSWindowController {
         let title = NSTextField(labelWithString: "Transition speed")
         title.font = .systemFont(ofSize: 15, weight: .semibold)
 
-        speedControl.target = self
-        speedControl.action = #selector(speedChanged)
-        speedControl.segmentStyle = .automatic
-        speedControl.translatesAutoresizingMaskIntoConstraints = false
+        speedName.font = .systemFont(ofSize: 14, weight: .semibold)
+        speedName.textColor = .controlAccentColor
+        speedName.alignment = .right
 
-        let selectedIndex = speedOptions.enumerated().min(by: {
-            abs($0.element.value - AppPreferences.velocity)
-                < abs($1.element.value - AppPreferences.velocity)
-        })?.offset ?? 2
-        speedControl.selectedSegment = selectedIndex
+        let headingSpacer = NSView()
+        headingSpacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        let headingRow = NSStackView(views: [title, headingSpacer, speedName])
+        headingRow.orientation = .horizontal
+        headingRow.alignment = .centerY
+
+        speedSlider.target = self
+        speedSlider.action = #selector(speedChanged)
+        speedSlider.numberOfTickMarks = TransitionSpeed.allCases.count
+        speedSlider.allowsTickMarkValuesOnly = true
+        speedSlider.tickMarkPosition = .below
+        speedSlider.isContinuous = true
+        speedSlider.doubleValue = Double(TransitionSpeed.nearest(to: AppPreferences.velocity).rawValue)
+        speedSlider.translatesAutoresizingMaskIntoConstraints = false
+        speedSlider.setAccessibilityLabel("Transition speed")
+
+        for label in speedLabels {
+            label.font = .systemFont(ofSize: 11, weight: .regular)
+            label.textColor = .tertiaryLabelColor
+            label.alignment = .center
+        }
+        let speedLabelRow = NSStackView(views: speedLabels)
+        speedLabelRow.orientation = .horizontal
+        speedLabelRow.distribution = .fillEqually
 
         speedCaption.font = .systemFont(ofSize: 12)
         speedCaption.textColor = .secondaryLabelColor
@@ -224,14 +241,18 @@ final class MainWindowController: NSWindowController {
         testRow.alignment = .centerY
         testRow.spacing = 8
 
-        let stack = NSStackView(views: [title, speedControl, speedCaption, testRow])
+        let stack = NSStackView(views: [headingRow, speedSlider, speedLabelRow, speedCaption, testRow])
         stack.orientation = .vertical
         stack.alignment = .centerX
-        stack.spacing = 11
+        stack.spacing = 8
+        stack.setCustomSpacing(2, after: speedSlider)
+        stack.setCustomSpacing(10, after: speedLabelRow)
 
         NSLayoutConstraint.activate([
-            speedControl.widthAnchor.constraint(equalToConstant: 430),
-            testRow.widthAnchor.constraint(equalTo: speedControl.widthAnchor)
+            headingRow.widthAnchor.constraint(equalToConstant: 430),
+            speedSlider.widthAnchor.constraint(equalTo: headingRow.widthAnchor),
+            speedLabelRow.widthAnchor.constraint(equalTo: headingRow.widthAnchor),
+            testRow.widthAnchor.constraint(equalTo: headingRow.widthAnchor)
         ])
         return makeCard(containing: stack, padding: 16)
     }
@@ -345,11 +366,20 @@ final class MainWindowController: NSWindowController {
     }
 
     private func updateSpeedCaption() {
-        let index = speedControl.selectedSegment
-        guard speedOptions.indices.contains(index) else {
-            return
+        let speed = selectedSpeed
+        speedName.stringValue = speed.title
+        speedCaption.stringValue = speed.caption
+        speedSlider.setAccessibilityValue("\(speed.title), \(speed.caption)")
+
+        for (index, label) in speedLabels.enumerated() {
+            let isSelected = index == speed.rawValue
+            label.font = .systemFont(ofSize: 11, weight: isSelected ? .semibold : .regular)
+            label.textColor = isSelected ? .controlAccentColor : .tertiaryLabelColor
         }
-        speedCaption.stringValue = speedOptions[index].caption
+    }
+
+    private var selectedSpeed: TransitionSpeed {
+        TransitionSpeed(rawValue: Int(speedSlider.doubleValue.rounded())) ?? .instant
     }
 
     @objc private func requestPermission() {
@@ -377,16 +407,13 @@ final class MainWindowController: NSWindowController {
     }
 
     @objc private func speedChanged() {
-        let index = speedControl.selectedSegment
-        guard speedOptions.indices.contains(index) else {
-            return
-        }
-        engine.velocity = speedOptions[index].value
+        let speed = selectedSpeed
+        speedSlider.doubleValue = Double(speed.rawValue)
+        engine.velocity = speed.velocity
         AppPreferences.velocity = engine.velocity
         AppPreferences.notifyChanged()
         updateSpeedCaption()
-        let label = speedControl.label(forSegment: index) ?? "selected speed"
-        eventStatus.stringValue = "Transition set to \(label)"
+        eventStatus.stringValue = "Transition set to \(speed.title)"
     }
 
     @objc private func switchPrevious() {
