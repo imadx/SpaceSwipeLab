@@ -79,11 +79,28 @@ final class SpaceSwipeEngine {
     var onSwitch: ((SpaceDirection) -> Void)?
     var onBoundary: ((SpaceDirection) -> Void)?
 
-    private enum GestureRoutingState {
+    enum CompanionEventHandling: Equatable {
+        case passThrough
+        case bufferAndSuppress
+        case suppress
+    }
+
+    enum GestureRoutingState {
         case idle
         case pendingDirection
         case replacement
         case nativeBoundary
+
+        var companionEventHandling: CompanionEventHandling {
+            switch self {
+            case .idle, .nativeBoundary:
+                return .passThrough
+            case .pendingDirection:
+                return .bufferAndSuppress
+            case .replacement:
+                return .suppress
+            }
+        }
     }
 
     private static let replayMarker: Int64 = 0x5353_504C
@@ -284,22 +301,19 @@ final class SpaceSwipeEngine {
             return shouldUseNativeGesture ? Unmanaged.passUnretained(event) : nil
         }
 
-        // Dock sends companion gesture events alongside its control event. Hold them only until
-        // the swipe direction is known so they can be restored for first/last-Space feedback.
+        // Gesture events also carry pinch, smart zoom, and other trackpad input. Do not consume
+        // them until Dock has identified an active horizontal Space swipe with a control event.
+        // Once identified, hold companion events until the direction is known so they can be
+        // restored for first/last-Space feedback.
         if internalType == 29 {
-            switch routingState {
-            case .pendingDirection:
+            switch routingState.companionEventHandling {
+            case .bufferAndSuppress:
                 bufferForNativeReplay(event)
                 return nil
-            case .replacement:
+            case .suppress:
                 return nil
-            case .nativeBoundary:
+            case .passThrough:
                 return Unmanaged.passUnretained(event)
-            case .idle:
-                routingState = .pendingDirection
-                bufferedNativeEvents.removeAll(keepingCapacity: true)
-                bufferForNativeReplay(event)
-                return nil
             }
         }
 

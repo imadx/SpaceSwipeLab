@@ -64,7 +64,7 @@ The universal signed DMG and checksum are written to `dist/`. To submit the DMG 
 
 ```bash
 NOTARY_KEYCHAIN_PROFILE=your-profile \
-  ./scripts/notarize-release.sh "$PWD/dist/SpaceSwipeLab-0.5.1.dmg"
+  ./scripts/notarize-release.sh "$PWD/dist/SpaceSwipeLab-0.5.2.dmg"
 ```
 
 The tag-based GitHub release workflow expects these repository secrets:
